@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block title %}EPIVIZ - Accueil{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-light p-5 rounded">
+    <h1 class="display-4">EPIVIZ - Prédictions de Pandémies</h1>
+    <p class="lead">Plateforme d'analyse et de prédiction des données de pandémies utilisant des modèles d'apprentissage automatique avancés.</p>
+    <hr class="my-4">
+    <p>Sélectionnez un pays pour voir les prédictions :</p>
+</div>
+
+<div class="mt-4">
+    <h2>Pays disponibles</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+        {% for country in countries %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ country }}</h5>
+                    <p class="card-text">Accédez aux prédictions pour {{ country }}</p>
+                    <a href="/country/{{ country }}" class="btn btn-primary">Voir les prédictions</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

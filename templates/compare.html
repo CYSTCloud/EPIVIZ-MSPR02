@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+
+{% block title %}Comparaison des pays{% endblock %}
+
+{% block content %}
+<h1>Comparaison des pays</h1>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Options de comparaison</h5>
+            </div>
+            <div class="card-body">
+                <form id="comparison-form">
+                    <div class="mb-3">
+                        <label class="form-label">Sélectionnez les pays à comparer :</label>
+                        <div class="border p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                            {% for country in countries %}
+                            <div class="form-check">
+                                <input class="form-check-input country-check" type="checkbox" value="{{ country }}" id="country-{{ loop.index }}">
+                                <label class="form-check-label" for="country-{{ loop.index }}">
+                                    {{ country }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="compare-days" class="form-label">Nombre de jours à prédire :</label>
+                        <input type="number" class="form-control" id="compare-days" name="days" min="7" max="90" value="30">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Comparer les pays</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Résultats de la comparaison</h5>
+            </div>
+            <div class="card-body text-center">
+                <div id="comparison-loading" class="d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p>Génération de la comparaison en cours...</p>
+                </div>
+                <div id="comparison-result">
+                    <p>Sélectionnez au moins deux pays et cliquez sur "Comparer les pays" pour voir les résultats.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4 d-none" id="comparison-chart-card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Comparaison des prédictions</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="comparison-chart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('comparison-form');
+    const loading = document.getElementById('comparison-loading');
+    const resultDiv = document.getElementById('comparison-result');
+    const chartCard = document.getElementById('comparison-chart-card');
+    const countryCheckboxes = document.querySelectorAll('.country-check');
+    
+    let comparisonChart = null;
+    
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Récupérer les pays sélectionnés
+        const selectedCountries = [];
+        countryCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                selectedCountries.push(checkbox.value);
+            }
+        });
+        
+        if (selectedCountries.length < 2) {
+            resultDiv.innerHTML = `<div class="alert alert-warning">Veuillez sélectionner au moins deux pays à comparer.</div>`;
+            return;
+        }
+        
+        const days = document.getElementById('compare-days').value;
+        
+        // Afficher le chargement
+        loading.classList.remove('d-none');
+        resultDiv.innerHTML = '';
+        chartCard.classList.add('d-none');
+        
+        try {
+            // Construire l'URL
+            const url = `/api/compare?countries=${selectedCountries.join(',')}&days=${days}`;
+            
+            // Faire la requête
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success) {
+                // Afficher les résultats
+                resultDiv.innerHTML = `<div class="alert alert-success">Comparaison générée avec succès pour ${data.countries.length} pays.</div>`;
+                
+                // Préparer les données pour le graphique
+                const chartData = {
+                    labels: data.dates,
+                    datasets: []
+                };
+                
+                // Couleurs pour les lignes du graphique
+                const colors = [
+                    'rgb(255, 99, 132)',
+                    'rgb(54, 162, 235)',
+                    'rgb(255, 206, 86)',
+                    'rgb(75, 192, 192)',
+                    'rgb(153, 102, 255)',
+                    'rgb(255, 159, 64)',
+                    'rgb(199, 199, 199)'
+                ];
+                
+                // Ajouter chaque pays au graphique
+                let colorIndex = 0;
+                for (const country of data.countries) {
+                    chartData.datasets.push({
+                        label: country,
+                        data: data.predictions[country],
+                        borderColor: colors[colorIndex % colors.length],
+                        backgroundColor: 'transparent',
+                        tension: 0.1
+                    });
+                    colorIndex++;
+                }
+                
+                // Afficher le graphique
+                chartCard.classList.remove('d-none');
+                const ctx = document.getElementById('comparison-chart').getContext('2d');
+                
+                if (comparisonChart) {
+                    comparisonChart.destroy();
+                }
+                
+                comparisonChart = new Chart(ctx, {
+                    type: 'line',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `Comparaison des prédictions pour ${days} jours`
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Nouveaux cas prédits'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                resultDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+            }
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="alert alert-danger">Erreur lors de la génération de la comparaison: ${error.message}</div>`;
+        } finally {
+            loading.classList.add('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}

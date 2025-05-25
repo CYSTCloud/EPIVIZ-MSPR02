@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+
+{% block title %}Erreur{% endblock %}
+
+{% block content %}
+<div class="alert alert-danger">
+    <h4 class="alert-heading">Erreur!</h4>
+    <p>{{ message }}</p>
+    <hr>
+    <p class="mb-0"><a href="/" class="alert-link">Retourner à l'accueil</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,271 @@
+openapi: 3.0.0
+info:
+  title: EPIVIZ Prediction API
+  description: |
+    API de prédiction des pandémies permettant d'accéder aux prédictions générées par les modèles d'apprentissage automatique.
+    Cette API fournit des endpoints pour obtenir des prédictions pour différents pays, accéder aux données historiques et comparer les prévisions entre pays.
+  version: 1.0.0
+  contact:
+    name: Équipe EPIVIZ
+servers:
+  - url: http://localhost:8000
+    description: Serveur de développement local
+tags:
+  - name: Pays
+    description: Opérations relatives aux pays disponibles
+  - name: Prédictions
+    description: Opérations relatives aux prédictions
+  - name: Données historiques
+    description: Opérations relatives aux données historiques
+  - name: Comparaison
+    description: Opérations de comparaison entre pays
+paths:
+  /api/countries:
+    get:
+      summary: Liste des pays disponibles
+      description: Retourne la liste de tous les pays pour lesquels des modèles sont disponibles
+      tags:
+        - Pays
+      responses:
+        '200':
+          description: Liste des pays récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  countries:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Afghanistan", "Brazil", "France"]
+  /api/predict/{country}:
+    get:
+      summary: Prédictions pour un pays
+      description: Génère des prédictions pour un nombre spécifié de jours pour un pays donné
+      tags:
+        - Prédictions
+      parameters:
+        - name: country
+          in: path
+          required: true
+          description: Nom du pays pour lequel générer des prédictions
+          schema:
+            type: string
+        - name: days
+          in: query
+          description: Nombre de jours à prédire (par défaut 30, maximum 365)
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 365
+        - name: model
+          in: query
+          description: Modèle à utiliser pour la prédiction (si non spécifié, le meilleur modèle sera utilisé)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Prédictions générées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  country:
+                    type: string
+                    example: "Afghanistan"
+                  model:
+                    type: string
+                    example: "gradient_boosting"
+                  days:
+                    type: integer
+                    example: 30
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                    example: ["2025-05-26", "2025-05-27", "2025-05-28"]
+                  predictions:
+                    type: array
+                    items:
+                      type: number
+                    example: [120.5, 115.2, 118.9]
+                  historical_dates:
+                    type: array
+                    items:
+                      type: string
+                    example: ["2025-04-26", "2025-04-27", "2025-04-28"]
+                  historical_cases:
+                    type: array
+                    items:
+                      type: number
+                    example: [100, 110, 105]
+                  plot:
+                    type: string
+                    description: Image du graphique encodée en base64
+        '404':
+          description: Pays non disponible ou modèle non trouvé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Pays non disponible: InvalidCountry"
+  /api/historical/{country}:
+    get:
+      summary: Données historiques d'un pays
+      description: Retourne les données historiques pour un pays spécifique
+      tags:
+        - Données historiques
+      parameters:
+        - name: country
+          in: path
+          required: true
+          description: Nom du pays
+          schema:
+            type: string
+        - name: days
+          in: query
+          description: Nombre de jours d'historique à récupérer (par défaut 365, maximum 365)
+          schema:
+            type: integer
+            default: 365
+            minimum: 1
+            maximum: 365
+      responses:
+        '200':
+          description: Données historiques récupérées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  country:
+                    type: string
+                    example: "Afghanistan"
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                    example: ["2024-05-26", "2024-05-27", "2024-05-28"]
+                  new_cases:
+                    type: array
+                    items:
+                      type: number
+                    example: [100, 110, 105]
+                  new_deaths:
+                    type: array
+                    items:
+                      type: number
+                    example: [5, 6, 4]
+        '404':
+          description: Pays non disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Pays non disponible: InvalidCountry"
+  /api/compare:
+    get:
+      summary: Comparaison entre pays
+      description: Compare les prédictions pour plusieurs pays
+      tags:
+        - Comparaison
+      parameters:
+        - name: countries
+          in: query
+          required: true
+          description: Liste des pays à comparer, séparés par des virgules
+          schema:
+            type: string
+            example: "Afghanistan,Brazil,France"
+        - name: days
+          in: query
+          description: Nombre de jours à prédire (par défaut 30, maximum 365)
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 365
+      responses:
+        '200':
+          description: Comparaison générée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  countries:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Afghanistan", "Brazil"]
+                  days:
+                    type: integer
+                    example: 30
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                    example: ["2025-05-26", "2025-05-27", "2025-05-28"]
+                  predictions:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: number
+                    example:
+                      Afghanistan: [120.5, 115.2, 118.9]
+                      Brazil: [350.1, 355.7, 349.2]
+        '400':
+          description: Paramètres invalides
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Aucun pays valide spécifié"
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Une erreur s'est produite"
